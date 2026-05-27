@@ -108,8 +108,10 @@ def run(cfg: DictConfig):
     policy = cfg.get("policy", "random")
 
     if policy != "random":
-        model = swm.wm.utils.load_pretrained(cfg.policy)
-        model = model.to("cuda")
+        device = resolve_device(cfg.get("device", cfg.solver.get("device", "auto")))
+        cfg.solver.device = device
+        model = swm.policy.AutoCostModel(cfg.policy)
+        model = model.to(device)
         model = model.eval()
         model.requires_grad_(False)
         model.interpolate_pos_encoding = True
@@ -132,7 +134,7 @@ def run(cfg: DictConfig):
     episode_len = get_episodes_length(dataset, ep_indices)
     max_start_idx = episode_len - cfg.eval.goal_offset_steps - 1
     max_start_idx_dict = {ep_id: max_start_idx[i] for i, ep_id in enumerate(ep_indices)}
-    # Map each dataset row’s episode_idx to its max_start_idx
+    # Map each dataset row's episode_idx to its max_start_idx
     col_name = "episode_idx" if "episode_idx" in dataset.column_names else "ep_idx"
     max_start_per_row = np.array(
         [max_start_idx_dict[ep_id] for ep_id in dataset.get_col_data(col_name)]
@@ -164,17 +166,18 @@ def run(cfg: DictConfig):
     results_path.mkdir(parents=True, exist_ok=True)
 
     start_time = time.time()
-    metrics = world.evaluate(
+    metrics = world.evaluate_from_dataset(
         dataset=dataset,
         start_steps=eval_start_idx.tolist(),
-        goal_offset=cfg.eval.goal_offset_steps,
+        goal_offset_steps=cfg.eval.goal_offset_steps,
         eval_budget=cfg.eval.eval_budget,
         episodes_idx=eval_episodes.tolist(),
         callables=OmegaConf.to_container(cfg.eval.get("callables"), resolve=True),
-        video=results_path,
+        save_video=cfg.output.get("save_video", False),
+        video_path=results_path,
     )
     end_time = time.time()
-    
+
     print(metrics)
 
     results_path = results_path / cfg.output.filename
