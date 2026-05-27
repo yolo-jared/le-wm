@@ -16,6 +16,27 @@ from sklearn import preprocessing
 from torchvision.transforms import v2 as transforms
 import stable_worldmodel as swm
 
+
+def resolve_device(requested=None):
+    if requested in (None, "auto"):
+        if torch.cuda.is_available():
+            return "cuda"
+        if torch.backends.mps.is_available():
+            return "mps"
+        return "cpu"
+
+    if requested == "cuda" and not torch.cuda.is_available():
+        fallback = "mps" if torch.backends.mps.is_available() else "cpu"
+        print(f"CUDA is not available; using {fallback}.")
+        return fallback
+
+    if requested == "mps" and not torch.backends.mps.is_available():
+        print("MPS is not available; using cpu.")
+        return "cpu"
+
+    return requested
+
+
 def img_transform(cfg):
     transform = transforms.Compose(
         [
