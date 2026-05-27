@@ -9,3 +9,6 @@ results/
 __pycache__/
 *.pyc
 outputs/
+
+# Local planning / RCA artifacts (superpowers, scratch notes, etc.)
+docs/superpowers/
