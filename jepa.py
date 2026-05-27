@@ -8,6 +8,14 @@ from torch import nn
 def detach_clone(v):
     return v.detach().clone() if torch.is_tensor(v) else v
 
+
+def move_tensor_for_model(v, device):
+    if not torch.is_tensor(v):
+        return v
+    if torch.is_floating_point(v):
+        v = v.float()
+    return v.to(device)
+
 class JEPA(nn.Module):
 
     def __init__(
@@ -133,7 +141,9 @@ class JEPA(nn.Module):
         device = next(self.parameters()).device
         for k in list(info_dict.keys()):
             if torch.is_tensor(info_dict[k]):
-                info_dict[k] = info_dict[k].to(device)
+                info_dict[k] = move_tensor_for_model(info_dict[k], device)
+
+        action_candidates = move_tensor_for_model(action_candidates, device)
 
         goal = {k: v[:, 0] for k, v in info_dict.items() if torch.is_tensor(v)}
         goal["pixels"] = goal["goal"]

@@ -1,0 +1,14 @@
+# macOS/MPS local artifacts
+.stable-wm/
+.cache/
+.uv-cache/
+results/
+
+# Python and Hydra runtime artifacts
+.venv/
+__pycache__/
+*.pyc
+outputs/
+
+# Local planning / RCA artifacts (superpowers, scratch notes, etc.)
+docs/superpowers/

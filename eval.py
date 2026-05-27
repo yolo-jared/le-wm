@@ -1,6 +1,8 @@
 import os
+import platform
 
-os.environ["MUJOCO_GL"] = "egl"
+if platform.system() != "Darwin":
+    os.environ.setdefault("MUJOCO_GL", "egl")
 
 import time
 from pathlib import Path
@@ -13,6 +15,28 @@ from omegaconf import DictConfig, OmegaConf
 from sklearn import preprocessing
 from torchvision.transforms import v2 as transforms
 import stable_worldmodel as swm
+from stable_worldmodel.data.formats.hdf5 import HDF5Dataset
+
+
+def resolve_device(requested=None):
+    if requested in (None, "auto"):
+        if torch.cuda.is_available():
+            return "cuda"
+        if torch.backends.mps.is_available():
+            return "mps"
+        return "cpu"
+
+    if requested == "cuda" and not torch.cuda.is_available():
+        fallback = "mps" if torch.backends.mps.is_available() else "cpu"
+        print(f"CUDA is not available; using {fallback}.")
+        return fallback
+
+    if requested == "mps" and not torch.backends.mps.is_available():
+        print("MPS is not available; using cpu.")
+        return "cpu"
+
+    return requested
+
 
 def img_transform(cfg):
     transform = transforms.Compose(
@@ -39,7 +63,7 @@ def get_episodes_length(dataset, episodes):
 
 def get_dataset(cfg, dataset_name):
     dataset_path = Path(cfg.cache_dir or swm.data.utils.get_cache_dir())
-    dataset = swm.data.HDF5Dataset(
+    dataset = HDF5Dataset(
         dataset_name,
         keys_to_cache=cfg.dataset.keys_to_cache,
         cache_dir=dataset_path,
@@ -85,8 +109,10 @@ def run(cfg: DictConfig):
     policy = cfg.get("policy", "random")
 
     if policy != "random":
-        model = swm.wm.utils.load_pretrained(cfg.policy)
-        model = model.to("cuda")
+        device = resolve_device(cfg.get("device", cfg.solver.get("device", "auto")))
+        cfg.solver.device = device
+        model = swm.policy.AutoCostModel(cfg.policy)
+        model = model.to(device)
         model = model.eval()
         model.requires_grad_(False)
         model.interpolate_pos_encoding = True
@@ -109,7 +135,7 @@ def run(cfg: DictConfig):
     episode_len = get_episodes_length(dataset, ep_indices)
     max_start_idx = episode_len - cfg.eval.goal_offset_steps - 1
     max_start_idx_dict = {ep_id: max_start_idx[i] for i, ep_id in enumerate(ep_indices)}
-    # Map each dataset row’s episode_idx to its max_start_idx
+    # Map each dataset row's episode_idx to its max_start_idx
     col_name = "episode_idx" if "episode_idx" in dataset.column_names else "ep_idx"
     max_start_per_row = np.array(
         [max_start_idx_dict[ep_id] for ep_id in dataset.get_col_data(col_name)]
@@ -151,7 +177,7 @@ def run(cfg: DictConfig):
         video=results_path,
     )
     end_time = time.time()
-    
+
     print(metrics)
 
     results_path = results_path / cfg.output.filename

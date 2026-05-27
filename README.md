@@ -36,6 +36,52 @@ source .venv/bin/activate
 uv pip install stable-worldmodel[train,env]
 ```
 
+### macOS / Apple Silicon (MPS)
+
+Apple Silicon Macs require a slightly different install and a few runtime flags. The TwoRoom evaluation has been validated end-to-end on M-series hardware.
+
+```bash
+uv venv --python=3.10
+source .venv/bin/activate
+UV_CACHE_DIR=.uv-cache uv pip install 'stable-worldmodel[train]'           # NOTE: [train], not [train,env]
+UV_CACHE_DIR=.uv-cache uv pip install 'datasets==2.21.0' 'transformers==4.46.3'
+UV_CACHE_DIR=.uv-cache uv pip install hdf5plugin 'imageio[ffmpeg]'         # runtime deps not in [train] extra
+
+export STABLEWM_HOME=$PWD/.stable-wm
+export PYTORCH_ENABLE_MPS_FALLBACK=1
+export HF_HOME=$PWD/.cache/huggingface
+export XDG_CACHE_HOME=$PWD/.cache
+export MPLCONFIGDIR=$PWD/.cache/matplotlib
+```
+
+Convert an HF checkpoint and smoke-test MPS:
+
+```bash
+hf download quentinll/lewm-tworooms --local-dir .stable-wm/hf_tworooms
+python scripts/convert_hf_tworoom.py
+python scripts/smoke_tworoom_device.py    # expect device=mps
+```
+
+Download and extract the TwoRoom dataset (swm expects it under `<STABLEWM_HOME>/datasets/`):
+
+```bash
+hf download quentinll/lewm-tworooms --repo-type dataset --local-dir .stable-wm/hf_tworooms_dataset
+mkdir -p .stable-wm/datasets
+tar --zstd -xvf .stable-wm/hf_tworooms_dataset/tworoom.tar.zst -C .stable-wm/datasets
+```
+
+Run TwoRoom eval on Metal:
+
+```bash
+python eval.py --config-name=tworoom.yaml policy=tworoom/lewm +device=mps solver.device=mps
+```
+
+Optional preset-based benchmark runner with HTML report:
+
+```bash
+python scripts/run_tworoom_benchmarks.py --preset smoke --preset sample --device mps --tag m2max-mps
+```
+
 ## Data
 
 Datasets use the HDF5 format for fast loading. Download the data from [HuggingFace](https://huggingface.co/collections/quentinll/lewm) and decompress with:
