@@ -43,6 +43,26 @@ model = torch.load(CKPT, map_location="cpu", weights_only=False).eval().to(devic
 
 ---
 
+## 3. `scripts/run_tworoom_benchmarks.py` — f-string quote fix (Task 10)
+
+**Where:** `scripts/run_tworoom_benchmarks.py`, line ~208 in `render_report()`
+
+**Plan said:**
+```python
+<div class=\"meta\">Generated {datetime.now().isoformat(timespec=\"seconds\")}. Records: {len(records)}.</div>
+```
+
+**This branch shipped:**
+```python
+<div class=\"meta\">Generated {datetime.now().isoformat(timespec='seconds')}. Records: {len(records)}.</div>
+```
+
+**Why:** Backslash-escapes (`\"`) inside an f-string **expression** (`{...}`) are a `SyntaxError` on Python 3.10 (the version this repo targets). They are only legal in the literal text portions of the f-string, where the rest of the HTML's `\"` escapes correctly survive. The fix is the minimum change required for the file to parse: only the one expression was switched to single quotes; every other `\"` in the HTML literal stays.
+
+**If this change breaks something:** It won't — but if you ever upgrade to Python 3.12+, both forms become legal and you could revert if you want consistency with the source fork.
+
+---
+
 ## How to use this file during RCA
 
 1. **Build/install fails** → check `plan.md` Task 1; this file is unlikely to be the cause.
