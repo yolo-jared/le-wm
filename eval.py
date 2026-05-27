@@ -15,6 +15,7 @@ from omegaconf import DictConfig, OmegaConf
 from sklearn import preprocessing
 from torchvision.transforms import v2 as transforms
 import stable_worldmodel as swm
+from stable_worldmodel.data.formats.hdf5 import HDF5Dataset
 
 
 def resolve_device(requested=None):
@@ -62,7 +63,7 @@ def get_episodes_length(dataset, episodes):
 
 def get_dataset(cfg, dataset_name):
     dataset_path = Path(cfg.cache_dir or swm.data.utils.get_cache_dir())
-    dataset = swm.data.HDF5Dataset(
+    dataset = HDF5Dataset(
         dataset_name,
         keys_to_cache=cfg.dataset.keys_to_cache,
         cache_dir=dataset_path,
@@ -166,15 +167,14 @@ def run(cfg: DictConfig):
     results_path.mkdir(parents=True, exist_ok=True)
 
     start_time = time.time()
-    metrics = world.evaluate_from_dataset(
+    metrics = world.evaluate(
         dataset=dataset,
         start_steps=eval_start_idx.tolist(),
-        goal_offset_steps=cfg.eval.goal_offset_steps,
+        goal_offset=cfg.eval.goal_offset_steps,
         eval_budget=cfg.eval.eval_budget,
         episodes_idx=eval_episodes.tolist(),
         callables=OmegaConf.to_container(cfg.eval.get("callables"), resolve=True),
-        save_video=cfg.output.get("save_video", False),
-        video_path=results_path,
+        video=results_path,
     )
     end_time = time.time()
 

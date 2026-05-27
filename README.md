@@ -45,6 +45,7 @@ uv venv --python=3.10
 source .venv/bin/activate
 UV_CACHE_DIR=.uv-cache uv pip install 'stable-worldmodel[train]'           # NOTE: [train], not [train,env]
 UV_CACHE_DIR=.uv-cache uv pip install 'datasets==2.21.0' 'transformers==4.46.3'
+UV_CACHE_DIR=.uv-cache uv pip install hdf5plugin 'imageio[ffmpeg]'         # runtime deps not in [train] extra
 
 export STABLEWM_HOME=$PWD/.stable-wm
 export PYTORCH_ENABLE_MPS_FALLBACK=1
@@ -59,6 +60,14 @@ Convert an HF checkpoint and smoke-test MPS:
 hf download quentinll/lewm-tworooms --local-dir .stable-wm/hf_tworooms
 python scripts/convert_hf_tworoom.py
 python scripts/smoke_tworoom_device.py    # expect device=mps
+```
+
+Download and extract the TwoRoom dataset (swm expects it under `<STABLEWM_HOME>/datasets/`):
+
+```bash
+hf download quentinll/lewm-tworooms --repo-type dataset --local-dir .stable-wm/hf_tworooms_dataset
+mkdir -p .stable-wm/datasets
+tar --zstd -xvf .stable-wm/hf_tworooms_dataset/tworoom.tar.zst -C .stable-wm/datasets
 ```
 
 Run TwoRoom eval on Metal:

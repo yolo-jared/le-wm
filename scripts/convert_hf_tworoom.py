@@ -10,7 +10,7 @@ from torch import nn
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / ".stable-wm" / "hf_tworooms"
-OUT = ROOT / ".stable-wm" / "tworoom" / "lewm_object.ckpt"
+OUT = ROOT / ".stable-wm" / "checkpoints" / "tworoom" / "lewm_object.ckpt"
 sys.path.insert(0, str(ROOT))
 
 os.environ.setdefault("HF_HOME", str(ROOT / ".cache" / "huggingface"))

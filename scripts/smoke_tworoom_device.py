@@ -13,7 +13,7 @@ import torch
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CKPT = ROOT / ".stable-wm" / "tworoom" / "lewm_object.ckpt"
+CKPT = ROOT / ".stable-wm" / "checkpoints" / "tworoom" / "lewm_object.ckpt"
 sys.path.insert(0, str(ROOT))
 
 os.environ.setdefault("HF_HOME", str(ROOT / ".cache" / "huggingface"))

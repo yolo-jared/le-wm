@@ -3,3 +3,9 @@
 .cache/
 .uv-cache/
 results/
+
+# Python and Hydra runtime artifacts
+.venv/
+__pycache__/
+*.pyc
+outputs/

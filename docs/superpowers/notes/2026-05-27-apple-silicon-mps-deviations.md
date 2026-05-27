@@ -63,6 +63,31 @@ model = torch.load(CKPT, map_location="cpu", weights_only=False).eval().to(devic
 
 ---
 
+## 4. Current swm API differs from the fork's snapshot
+
+The fork was tested against an older `stable-worldmodel`. We validated against `stable-worldmodel==0.1.0` (whatever PyPI shipped as of 2026-05-27) and hit the following deltas that required code/path adjustments **after** initial implementation:
+
+| Surface | Fork assumed | Current swm | Fix applied |
+|---|---|---|---|
+| HDF5 dataset class | `swm.data.HDF5Dataset` at top level | Only `swm.data.formats.hdf5.HDF5Dataset` (and not auto-registered until the module is imported) | `eval.py` adds `from stable_worldmodel.data.formats.hdf5 import HDF5Dataset` and uses it directly |
+| Evaluate method name | `world.evaluate_from_dataset(...)` with `goal_offset_steps=`, `save_video=`, `video_path=` | `world.evaluate(...)` with `goal_offset=`, `video=` | `eval.py` reverted to the older signature: `world.evaluate(..., goal_offset=..., video=results_path)` |
+| Dataset file location | `<STABLEWM_HOME>/<name>.h5` | `<STABLEWM_HOME>/datasets/<name>.h5` | README updated; smoke-eval setup moves the file |
+| Checkpoint file location | `<STABLEWM_HOME>/<run>/_object.ckpt` | `<STABLEWM_HOME>/checkpoints/<run>/_object.ckpt` | `scripts/convert_hf_tworoom.py` updated to write under `checkpoints/`; `scripts/smoke_tworoom_device.py` updated to read from `checkpoints/` |
+
+These are not security choices — they're forced moves to match the installed swm. If you upgrade or downgrade swm and these symbols/paths shift again, look here first.
+
+## 5. Runtime deps not in `stable-worldmodel[train]`
+
+The `[train]` extra (which we use per the fork to avoid the `gym==0.21.0` build break of `[train,env]` on macOS) does NOT pull in three deps that the runtime actually needs:
+
+- `imageio` — imported by `stable_worldmodel/wrapper/visual.py` at top of swm's `__init__` chain. Without it: `ModuleNotFoundError: No module named 'imageio'` at the `import stable_worldmodel as swm` line in `eval.py`.
+- `imageio[ffmpeg]` (i.e. `imageio-ffmpeg`) — needed for mp4 video output during `world.evaluate(..., video=...)`. Without it: `ValueError: Could not find a backend to open ... env_0.mp4`.
+- `hdf5plugin` — imported at the top of `stable_worldmodel/data/formats/hdf5.py`. Without it: `ModuleNotFoundError: No module named 'hdf5plugin'` when we try to import the HDF5Dataset class.
+
+The README's macOS section was updated to install all three after the pinned `datasets` / `transformers` step. If swm ever moves them into the `[train]` extra (or you use a different extra that bundles them), the explicit install becomes redundant but not harmful.
+
+---
+
 ## How to use this file during RCA
 
 1. **Build/install fails** → check `plan.md` Task 1; this file is unlikely to be the cause.
