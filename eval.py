@@ -1,6 +1,8 @@
 import os
+import platform
 
-os.environ["MUJOCO_GL"] = "egl"
+if platform.system() != "Darwin":
+    os.environ.setdefault("MUJOCO_GL", "egl")
 
 import time
 from pathlib import Path
