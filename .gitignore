@@ -1,0 +1,5 @@
+# macOS/MPS local artifacts
+.stable-wm/
+.cache/
+.uv-cache/
+results/
